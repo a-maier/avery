@@ -4,7 +4,7 @@ pub mod convert_lhef;
 #[cfg(feature = "hepmc2")]
 pub mod convert_hepmc2;
 
-use crate::event::Event;
+pub use crate::event::Event;
 
 pub fn convert<T, U>(event: T) -> U
 where
