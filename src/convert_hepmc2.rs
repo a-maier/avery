@@ -183,23 +183,32 @@ impl From<Event> for hepmc2::Event {
             }
             vertices.push(vx);
         } else {
-            for vx in g.node_indices() {
-                use petgraph::Direction::Incoming;
+            for (n, vx) in g.node_indices().enumerate() {
+                use petgraph::Direction::{Incoming, Outgoing};
                 // TODO: is this barcode correct?
-                let barcode = - (vertices.len() as i32) - 1;
-                for n in g.edges_directed(vx, Incoming).map(|e| *e.weight()) {
+                let barcode = - (n as i32) - 1;
+                let incoming = g.edges_directed(vx, Incoming);
+                let outgoing = g.edges_directed(vx, Outgoing);
+                // HepMC does not like vertices with no incoming
+                // particles and does not include the end vertex for
+                // final-state particles
+                if incoming.clone().count() == 0
+                    || outgoing.count() == 0 {
+                        continue;
+                    }
+                for n in incoming.map(|e| *e.weight()) {
                     particles[n].end_vtx = barcode;
                 }
             }
 
-            for vx in g.node_indices() {
-                let barcode = - (vertices.len() as i32) - 1;
+            for (n, vx) in g.node_indices().enumerate() {
+                let barcode = - (n as i32) - 1;
                 use petgraph::Direction::{Incoming, Outgoing};
+
                 let incoming = Vec::from_iter(
                     g.edges_directed(vx, Incoming)
                         .map(|e| particles[*e.weight()].clone())
                 );
-                // HepMC does not like vertices with no incoming particles
                 if incoming.is_empty() {
                     continue;
                 }
@@ -207,7 +216,6 @@ impl From<Event> for hepmc2::Event {
                     g.edges_directed(vx, Outgoing)
                         .map(|e| particles[*e.weight()].clone())
                 );
-                // HepMC does not include the end vertex for final-state particles
                 if outgoing.is_empty() {
                     continue;
                 }
