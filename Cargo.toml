@@ -2,15 +2,21 @@
 name = "avery"
 version = "0.1.0"
 edition = "2021"
+description = "A scattering event format for converting between other formats"
+authors = ["Andreas Maier <andreas.martin.maier@desy.de>"]
+license = "GPL-3.0-or-later"
+keywords = ["physics"]
+categories = ["science"]
+repository = "https://github.com/a-maier/avery"
 
 [dependencies]
-ahash = "0.8.3"
-hepmc2 = { version = "0.5.1", optional = true }
-itertools = "0.11.0"
-lhef = { version = "0.5.0", optional = true }
-ntuple = { version = "0.7.0", optional = true }
-particle_id = "0.3.0"
-petgraph = "0.6.3"
+ahash = "0.8"
+hepmc2 = { version = "0.5", optional = true }
+itertools = "0.11"
+lhef = { version = "0.5", optional = true }
+ntuple = { version = "0.7", optional = true }
+particle_id = "0.4"
+petgraph = "0.6"
 
 [features]
 default = ["lhef", "hepmc2"]
