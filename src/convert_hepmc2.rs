@@ -133,23 +133,8 @@ impl From<hepmc2::Event> for Event {
 impl From<Event> for hepmc2::Event {
     fn from(source: Event) -> Self {
         let mut vertices = Vec::new();
-        let mut beam_particles = Vec::with_capacity(2);
-        for beam in source.sample_info.beam {
-            let e = beam.energy.unwrap_or_default();
-            let p = hepmc2::event::Particle {
-                id: beam.id.map(|id| id.id()).unwrap_or_default(),
-                p: FourVector([e, 0., 0., 0.]),
-                status: HEPMC_INCOMING,
-                ..Default::default()
-            };
-            beam_particles.push(p);
-        }
-        let root_vx = Vertex {
-            barcode: 0,
-            particles_out: beam_particles,
-            ..Default::default()
-        };
-        vertices.push(root_vx);
+        // TODO: rivet chokes on this
+        // add_root_vertex(source.sample_info.beam, &mut vertices);
 
         let nparticles = source.particles.len();
         let mut particles = Vec::with_capacity(nparticles);
@@ -273,6 +258,26 @@ impl From<Event> for hepmc2::Event {
         }
     }
 }
+
+// fn add_root_vertex(beams: [Beam; 2], vertices: &mut Vec<Vertex>)  {
+//     let mut beam_particles = Vec::with_capacity(2);
+//     for beam in beams {
+//         let e = beam.energy.unwrap_or_default();
+//         let p = hepmc2::event::Particle {
+//             id: beam.id.map(|id| id.id()).unwrap_or_default(),
+//             p: FourVector([e, 0., 0., 0.]),
+//             status: HEPMC_INCOMING,
+//             ..Default::default()
+//         };
+//         beam_particles.push(p);
+//     }
+//     let root_vx = Vertex {
+//         barcode: 0,
+//         particles_out: beam_particles,
+//         ..Default::default()
+//     };
+//     vertices.push(root_vx);
+// }
 
 fn from_i32(status: i32) -> Status {
     use Status::*;
