@@ -1,5 +1,5 @@
 use ahash::AHashMap;
-use hepmc2::event::{FourVector, Vertex, PdfInfo};
+use hepmc2::event::{Vertex, PdfInfo};
 use itertools::izip;
 use particle_id::ParticleID;
 use petgraph::{visit::NodeIndexable, prelude::DiGraph};
@@ -70,11 +70,11 @@ impl From<hepmc2::Event> for Event {
             // TODO: here we assume that everything is sane
             //       make it more robust?
             let mut vx_particles = Vec::new();
-            // only consider incident particles with incoming status,
-            // all other incident particles will be treated when
+            // exclude incident particles with decayed status,
+            // they will be will be treated when
             // looking at the vertex where they originate
             let incoming = vx.particles_in.into_iter()
-                .filter(|p| p.status == HEPMC_INCOMING);
+                .filter(|p| p.status != HEPMC_DECAYED);
             for incoming in incoming {
                 topology.add_node(Default::default());
                 let start = topology.from_index(topology.node_count() - 1);
@@ -170,17 +170,14 @@ impl From<Event> for hepmc2::Event {
         } else {
             for (n, vx) in g.node_indices().enumerate() {
                 use petgraph::Direction::{Incoming, Outgoing};
+                let outgoing = g.edges_directed(vx, Outgoing);
+                if outgoing.count() == 0 {
+                    // all particles here are final-state, don't set a barcode
+                    continue;
+                }
                 // TODO: is this barcode correct?
                 let barcode = - (n as i32) - 1;
                 let incoming = g.edges_directed(vx, Incoming);
-                let outgoing = g.edges_directed(vx, Outgoing);
-                // HepMC does not like vertices with no incoming
-                // particles and does not include the end vertex for
-                // final-state particles
-                if incoming.clone().count() == 0
-                    || outgoing.count() == 0 {
-                        continue;
-                    }
                 for n in incoming.map(|e| *e.weight()) {
                     particles[n].end_vtx = barcode;
                 }
@@ -194,6 +191,8 @@ impl From<Event> for hepmc2::Event {
                     g.edges_directed(vx, Incoming)
                         .map(|e| particles[*e.weight()].clone())
                 );
+                // HepMC does not like vertices with no incoming
+                // particles
                 if incoming.is_empty() {
                     continue;
                 }
@@ -201,6 +200,8 @@ impl From<Event> for hepmc2::Event {
                     g.edges_directed(vx, Outgoing)
                         .map(|e| particles[*e.weight()].clone())
                 );
+                // HepMC does not include the end vertex for
+                // final-state particles
                 if outgoing.is_empty() {
                     continue;
                 }
