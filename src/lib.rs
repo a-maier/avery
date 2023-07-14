@@ -1,8 +1,8 @@
 pub mod event;
 #[cfg(feature = "lhef")]
-pub mod convert_lhef;
+pub mod lhef;
 #[cfg(feature = "hepmc2")]
-pub mod convert_hepmc2;
+pub mod hepmc2;
 
 pub use crate::event::Event;
 
