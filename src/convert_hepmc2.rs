@@ -141,6 +141,31 @@ impl From<Event> for hepmc2::Event {
         // TODO: rivet chokes on this
         // add_root_vertex(source.sample_info.beam, &mut vertices);
 
+        let incoming = source.particles.iter().filter(
+            |p| p.status == Some(Status::Incoming)
+        );
+        let mut parton_id = [0, 0];
+        let mut x = [0., 0.];
+        for particle in incoming {
+            let Some(p) = particle.p else {
+                continue
+            };
+            let idx = if p[3] < 0. { 0 } else { 1 };
+            parton_id[idx] = particle.id.map(|id| id.id()).unwrap_or_default();
+            let beam = &source.sample_info.beam[idx];
+            if let Some(e) = beam.energy {
+                x[idx] = p[0] / e;
+            }
+        }
+        let pdf_info = PdfInfo {
+            parton_id,
+            x,
+            scale: source.scales.mu_f.unwrap_or_default(),
+            xf: Default::default(), // TODO: PDF value
+            pdf_id: source.sample_info.pdf.map(|p| p.unwrap_or_default()),
+        };
+
+
         let nparticles = source.particles.len();
         let mut particles = Vec::with_capacity(nparticles);
         for particle in source.particles {
@@ -156,6 +181,7 @@ impl From<Event> for hepmc2::Event {
             p.status = particle.status.map(to_i32).unwrap_or_default();
             particles.push(p);
         }
+
         let g = &source.topology;
         // ensure there is always at least one vertex
         if g.node_count() == 0 {
@@ -236,14 +262,6 @@ impl From<Event> for hepmc2::Event {
             }
         }
         xs.cross_section_error = xs.cross_section_error.sqrt();
-        let pdf_info = PdfInfo {
-            parton_id: source.sample_info.beam
-                .map(|b| b.id.map(|id| id.id()).unwrap_or_default()),
-            x: Default::default(), // TODO: compute
-            scale: source.scales.mu_f.unwrap_or_default(),
-            xf: Default::default(), // TODO
-            pdf_id: source.sample_info.pdf.map(|p| p.unwrap_or_default()),
-        };
         Self {
             number: source.id.unwrap_or_default(),
             mpi: source.mpi.unwrap_or_default(),
