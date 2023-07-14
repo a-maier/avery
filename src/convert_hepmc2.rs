@@ -4,7 +4,7 @@ use itertools::izip;
 use particle_id::ParticleID;
 use petgraph::{visit::NodeIndexable, prelude::DiGraph};
 
-use crate::event::{Event, WeightInfo, Scales, SampleInfo, Particle, Status, CrossSection, Beam};
+use crate::event::{Event, WeightInfo, Scales, SampleInfo, Particle, Status, CrossSection, Beam, HeavyIonInfo};
 
 const HEPMC_OUTGOING: i32 = 1;
 const HEPMC_DECAYED: i32 = 2;
@@ -124,7 +124,7 @@ impl From<hepmc2::Event> for Event {
             topology,
             mpi: Some(source.mpi),
             random_states: source.random_states,
-            heavy_ion_info: source.heavy_ion_info,
+            heavy_ion_info: source.heavy_ion_info.map(|h| h.into()),
             ..Default::default()
         }
     }
@@ -255,7 +255,7 @@ impl From<Event> for hepmc2::Event {
             pdf_info,
             energy_unit: hepmc2::event::EnergyUnit::GEV,
             length_unit: hepmc2::event::LengthUnit::MM,
-            heavy_ion_info: source.heavy_ion_info,
+            heavy_ion_info: source.heavy_ion_info.map(|h| h.into()),
         }
     }
 }
@@ -318,5 +318,57 @@ impl From<CrossSection> for hepmc2::event::CrossSection {
             cross_section: source.mean,
             cross_section_error: source.err.unwrap_or_default(),
         }
+    }
+}
+
+impl From<&HeavyIonInfo> for hepmc2::event::HeavyIonInfo {
+    fn from(source: &HeavyIonInfo) -> Self {
+        Self {
+            ncoll_hard: source.ncoll_hard.unwrap_or_default() ,
+            npart_proj: source.npart_proj.unwrap_or_default() ,
+            npart_targ: source.npart_targ.unwrap_or_default() ,
+            ncoll: source.ncoll.unwrap_or_default() ,
+            spectator_neutrons: source.spectator_neutrons.unwrap_or_default() ,
+            spectator_protons: source.spectator_protons.unwrap_or_default() ,
+            n_nwounded_collisions: source.n_nwounded_collisions.unwrap_or_default() ,
+            nwounded_n_collisions: source.nwounded_n_collisions.unwrap_or_default() ,
+            nwounded_nwounded_collisions: source.nwounded_nwounded_collisions.unwrap_or_default() ,
+            impact_parameter: source.impact_parameter.unwrap_or_default() ,
+            event_plane_angle: source.event_plane_angle.unwrap_or_default() ,
+            eccentricity: source.eccentricity.unwrap_or_default() ,
+            sigma_inel_nn: source.sigma_inel_nn.unwrap_or_default()
+        }
+    }
+}
+
+impl From<HeavyIonInfo> for hepmc2::event::HeavyIonInfo {
+    fn from(source: HeavyIonInfo) -> Self {
+        (&source).into()
+    }
+}
+
+impl From<&hepmc2::event::HeavyIonInfo> for HeavyIonInfo {
+    fn from(source: &hepmc2::event::HeavyIonInfo) -> Self {
+        Self {
+            ncoll_hard: Some(source.ncoll_hard),
+            npart_proj: Some(source.npart_proj),
+            npart_targ: Some(source.npart_targ),
+            ncoll: Some(source.ncoll),
+            spectator_neutrons: Some(source.spectator_neutrons),
+            spectator_protons: Some(source.spectator_protons),
+            n_nwounded_collisions: Some(source.n_nwounded_collisions),
+            nwounded_n_collisions: Some(source.nwounded_n_collisions),
+            nwounded_nwounded_collisions: Some(source.nwounded_nwounded_collisions),
+            impact_parameter: Some(source.impact_parameter),
+            event_plane_angle: Some(source.event_plane_angle),
+            eccentricity: Some(source.eccentricity),
+            sigma_inel_nn: Some(source.sigma_inel_nn),
+        }
+    }
+}
+
+impl From<hepmc2::event::HeavyIonInfo> for HeavyIonInfo {
+    fn from(source: hepmc2::event::HeavyIonInfo) -> Self {
+        (&source).into()
     }
 }

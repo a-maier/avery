@@ -29,8 +29,8 @@ pub struct Event {
     /// Multiparton interaction
     pub mpi: Option<i32>,
     pub random_states: Vec<i32>,
-    #[cfg(feature = "hepmc2")]
-    pub heavy_ion_info: Option<hepmc2::event::HeavyIonInfo>,
+    /// Information for heavy ion collisions
+    pub heavy_ion_info: Option<HeavyIonInfo>,
     /// Event topology
     ///
     /// Edge weights correspond to the index in the `particles` vector.
@@ -159,4 +159,22 @@ pub struct Vertex {
     pub z: Option<f64>,
     pub t: Option<f64>,
     pub weights: Vec<f64>,
+}
+
+/// Information for heavy ion collisions
+#[derive(Debug, PartialEq, PartialOrd, Default, Copy, Clone)]
+pub struct HeavyIonInfo {
+    pub ncoll_hard: Option<i32>,
+    pub npart_proj: Option<i32>,
+    pub npart_targ: Option<i32>,
+    pub ncoll: Option<i32>,
+    pub spectator_neutrons: Option<i32>,
+    pub spectator_protons: Option<i32>,
+    pub n_nwounded_collisions: Option<i32>,
+    pub nwounded_n_collisions: Option<i32>,
+    pub nwounded_nwounded_collisions: Option<i32>,
+    pub impact_parameter: Option<f64>,
+    pub event_plane_angle: Option<f64>,
+    pub eccentricity: Option<f64>,
+    pub sigma_inel_nn: Option<f64>,
 }
