@@ -4,7 +4,7 @@ use itertools::izip;
 use particle_id::ParticleID;
 use petgraph::{visit::NodeIndexable, prelude::DiGraph};
 
-use crate::event::{Event, WeightInfo, Scales, SampleInfo, Particle, Status, CrossSection, Beam, HeavyIonInfo};
+use crate::{event::{Event, WeightInfo, Scales, SampleInfo, Particle, Status, CrossSection, Beam, HeavyIonInfo}, util::{IncomingInfo, extract_inc_info}};
 
 const HEPMC_OUTGOING: i32 = 1;
 const HEPMC_DECAYED: i32 = 2;
@@ -141,22 +141,7 @@ impl From<Event> for hepmc2::Event {
         // TODO: rivet chokes on this
         // add_root_vertex(source.sample_info.beam, &mut vertices);
 
-        let incoming = source.particles.iter().filter(
-            |p| p.status == Some(Status::Incoming)
-        );
-        let mut parton_id = [0, 0];
-        let mut x = [0., 0.];
-        for particle in incoming {
-            let Some(p) = particle.p else {
-                continue
-            };
-            let idx = if p[3] < 0. { 0 } else { 1 };
-            parton_id[idx] = particle.id.map(|id| id.id()).unwrap_or_default();
-            let beam = &source.sample_info.beam[idx];
-            if let Some(e) = beam.energy {
-                x[idx] = p[0] / e;
-            }
-        }
+        let IncomingInfo{parton_id, x} = extract_inc_info(&source);
         let pdf_info = PdfInfo {
             parton_id,
             x,
@@ -164,7 +149,6 @@ impl From<Event> for hepmc2::Event {
             xf: Default::default(), // TODO: PDF value
             pdf_id: source.sample_info.pdf.map(|p| p.unwrap_or_default()),
         };
-
 
         let nparticles = source.particles.len();
         let mut particles = Vec::with_capacity(nparticles);

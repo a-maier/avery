@@ -3,6 +3,9 @@ pub mod event;
 pub mod lhef;
 #[cfg(feature = "hepmc2")]
 pub mod hepmc2;
+#[cfg(feature = "ntuple")]
+pub mod ntuple;
+mod util;
 
 pub use crate::event::Event;
 
