@@ -18,6 +18,11 @@ impl From<hepmc2::Event> for Event {
         } else {
             1.
         };
+        let lfact = if source.length_unit == hepmc2::event::LengthUnit::MM {
+            0.1
+        } else {
+            1.
+        };
         let mut beam = [Beam::default(), Beam::default()];
         let root_vx = source.vertices.iter().position(
             |vx| vx.particles_in.is_empty() && vx.particles_out.len() <= 2
@@ -61,9 +66,9 @@ impl From<hepmc2::Event> for Event {
                 let idx = topology.from_index(idx);
                 let node = topology.node_weight_mut(idx).unwrap();
                 node.status = Some(vx.status);
-                node.x = Some(vx.x);
-                node.y = Some(vx.y);
-                node.z = Some(vx.z);
+                node.x = Some(lfact * vx.x);
+                node.y = Some(lfact * vx.y);
+                node.z = Some(lfact * vx.z);
                 node.t = Some(vx.t);
                 node.weights = vx.weights;
             }
