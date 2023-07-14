@@ -34,8 +34,6 @@ pub struct Event {
     /// Event topology
     ///
     /// Edge weights correspond to the index in the `particles` vector.
-    ///
-    /// TODO: HepMC vertex information
     pub topology: DiGraph<Vertex, usize>
 }
 
