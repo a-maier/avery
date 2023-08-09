@@ -17,6 +17,7 @@ lhef = { version = "0.6", optional = true }
 ntuple = { version = "0.7", optional = true }
 particle_id = "0.4"
 petgraph = "0.6"
+stripper-xml = { version = "0.4", optional = true }
 
 [features]
 default = ["lhef", "hepmc2"]

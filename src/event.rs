@@ -34,7 +34,9 @@ pub struct Event {
     /// Event topology
     ///
     /// Edge weights correspond to the index in the `particles` vector.
-    pub topology: DiGraph<Vertex, usize>
+    pub topology: DiGraph<Vertex, usize>,
+    /// STRIPPER-XML reweighting information
+    pub reweights: Vec<Reweight>,
 }
 
 /// Global information about an event sample
@@ -175,4 +177,13 @@ pub struct HeavyIonInfo {
     pub event_plane_angle: Option<f64>,
     pub eccentricity: Option<f64>,
     pub sigma_inel_nn: Option<f64>,
+}
+
+/// STRIPPER-XML reweighting information
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
+pub struct Reweight {
+    pub channel: u32,
+    pub x1: f64,
+    pub x2: f64,
+    pub log_coeff: Vec<f64>,
 }

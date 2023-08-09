@@ -5,6 +5,8 @@ pub mod lhef;
 pub mod hepmc2;
 #[cfg(feature = "ntuple")]
 pub mod ntuple;
+#[cfg(feature = "stripper-xml")]
+pub mod stripper_xml;
 mod util;
 
 pub use crate::event::Event;
