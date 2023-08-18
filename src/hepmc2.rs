@@ -30,7 +30,7 @@ impl From<hepmc2::Event> for Event {
         if let Some(root_vx) = root_vx {
             let root_vx = source.vertices.swap_remove(root_vx);
             for (beam, beam_p) in izip!(&mut beam, root_vx.particles_out.into_iter()) {
-                beam.energy = Some(beam_p.p[0]);
+                beam.energy = Some(efact * beam_p.p[0]);
                 beam.id = Some(ParticleID::new(beam_p.id));
             }
         }
