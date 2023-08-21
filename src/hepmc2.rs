@@ -2,9 +2,9 @@ use ahash::AHashMap;
 use hepmc2::event::{Vertex, PdfInfo};
 use itertools::izip;
 use particle_id::ParticleID;
-use petgraph::{visit::NodeIndexable, prelude::DiGraph};
+use petgraph::{visit::{NodeIndexable, EdgeRef}, prelude::DiGraph, Graph, graph::EdgeReference};
 
-use crate::{event::{Event, WeightInfo, Scales, SampleInfo, Particle, Status, CrossSection, Beam, HeavyIonInfo}, util::{IncomingInfo, extract_inc_info}};
+use crate::{event::{Event, WeightInfo, Scales, SampleInfo, Particle, Status, CrossSection, HeavyIonInfo}, util::{IncomingInfo, extract_inc_info}};
 
 const HEPMC_OUTGOING: i32 = 1;
 const HEPMC_DECAYED: i32 = 2;
@@ -190,15 +190,6 @@ impl From<Event> for hepmc2::Event {
                 let barcode = - (n as i32) - 1;
                 use petgraph::Direction::{Incoming, Outgoing};
 
-                let incoming = Vec::from_iter(
-                    g.edges_directed(vx, Incoming)
-                        .map(|e| particles[*e.weight()].clone())
-                );
-                // HepMC does not like vertices with no incoming
-                // particles
-                if incoming.is_empty() {
-                    continue;
-                }
                 let outgoing = Vec::from_iter(
                     g.edges_directed(vx, Outgoing)
                         .map(|e| particles[*e.weight()].clone())
@@ -208,6 +199,15 @@ impl From<Event> for hepmc2::Event {
                 if outgoing.is_empty() {
                     continue;
                 }
+                let incoming = Vec::from_iter(
+                    g.edges_directed(vx, Incoming)
+                    // don't include intermediate particles
+                        .filter_map(|e| if is_incoming(g, e) {
+                            Some(particles[*e.weight()].clone())
+                        } else {
+                            None
+                        })
+                );
                 assert!(incoming.iter().all(|p| p.end_vtx == barcode));
                 let vx = g.node_weight(vx).unwrap();
 
@@ -253,6 +253,15 @@ impl From<Event> for hepmc2::Event {
             heavy_ion_info: source.heavy_ion_info.map(|h| h.into()),
         }
     }
+}
+
+fn is_incoming(
+    g: &Graph<crate::event::Vertex, usize>,
+    e: EdgeReference<usize>,
+) -> bool {
+    use petgraph::Direction::Incoming;
+
+    g.edges_directed(e.source(), Incoming).next().is_none()
 }
 
 // fn add_root_vertex(beams: [Beam; 2], vertices: &mut Vec<Vertex>)  {
