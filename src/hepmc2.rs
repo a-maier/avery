@@ -199,6 +199,11 @@ impl From<Event> for hepmc2::Event {
                 if outgoing.is_empty() {
                     continue;
                 }
+                // HepMC does not include the start vertex for
+                // initial-state particles
+                if g.edges_directed(vx, Incoming).next().is_none() {
+                    continue;
+                }
                 let incoming = Vec::from_iter(
                     g.edges_directed(vx, Incoming)
                     // don't include intermediate particles
