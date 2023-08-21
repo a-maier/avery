@@ -12,7 +12,7 @@ const HEPMC_DOC: i32 = 3;
 const HEPMC_INCOMING: i32 = 4;
 
 impl From<hepmc2::Event> for Event {
-    fn from(mut source: hepmc2::Event) -> Self {
+    fn from(source: hepmc2::Event) -> Self {
         let efact = if source.energy_unit == hepmc2::event::EnergyUnit::MEV {
             1e-3
         } else {
@@ -23,21 +23,9 @@ impl From<hepmc2::Event> for Event {
         } else {
             1.
         };
-        let mut beam = [Beam::default(), Beam::default()];
-        let root_vx = source.vertices.iter().position(
-            |vx| vx.particles_in.is_empty() && vx.particles_out.len() <= 2
-        );
-        if let Some(root_vx) = root_vx {
-            let root_vx = source.vertices.swap_remove(root_vx);
-            for (beam, beam_p) in izip!(&mut beam, root_vx.particles_out.into_iter()) {
-                beam.energy = Some(efact * beam_p.p[0]);
-                beam.id = Some(ParticleID::new(beam_p.id));
-            }
-        }
         let sample_info = SampleInfo {
             pdf: source.pdf_info.pdf_id.map(Some),
             cross_sections: vec![source.xs.into()],
-            beam,
             ..Default::default()
         };
         let weights = izip!(
