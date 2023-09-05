@@ -17,7 +17,7 @@ impl From<HEPRUP> for SampleInfo {
             .unwrap();
         let cross_sections = source.XSECUP
             .into_iter()
-            .zip(source.XERRUP.into_iter())
+            .zip(source.XERRUP)
             .map(|(mean, err)| CrossSection{ mean, err: Some(err) })
             .collect();
         Self {
