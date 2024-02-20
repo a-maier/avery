@@ -1,8 +1,8 @@
 pub mod event;
-#[cfg(feature = "lhef")]
-pub mod lhef;
 #[cfg(feature = "hepmc2")]
 pub mod hepmc2;
+#[cfg(feature = "lhef")]
+pub mod lhef;
 #[cfg(feature = "ntuple")]
 pub mod ntuple;
 #[cfg(feature = "stripper-xml")]

@@ -1,10 +1,20 @@
 use ahash::AHashMap;
 use itertools::izip;
-use lhef::{HEPRUP, HEPEUP, status::{INCOMING, OUTGOING, INTERMEDIATE_SPACELIKE, INTERMEDIATE_RESONANCE, INTERMEDIATE_DOC, INCOMING_BEAM}};
+use lhef::{
+    status::{
+        INCOMING, INCOMING_BEAM, INTERMEDIATE_DOC, INTERMEDIATE_RESONANCE,
+        INTERMEDIATE_SPACELIKE, OUTGOING,
+    },
+    HEPEUP, HEPRUP,
+};
 use particle_id::ParticleID;
 use petgraph::{prelude::DiGraph, visit::NodeIndexable};
 
-use crate::event::{Event, SampleInfo, Beam, CrossSection, WeightInfo, Scales, Particle, Status::{*, self}};
+use crate::event::{
+    Beam, CrossSection, Event, Particle, SampleInfo, Scales,
+    Status::{self, *},
+    WeightInfo,
+};
 
 impl From<HEPRUP> for SampleInfo {
     fn from(source: HEPRUP) -> Self {
@@ -12,13 +22,18 @@ impl From<HEPRUP> for SampleInfo {
             .map(|(id, e)| Beam {
                 id: Some(ParticleID::new(id)),
                 energy: Some(e),
-            }).collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>()
             .try_into()
             .unwrap();
-        let cross_sections = source.XSECUP
+        let cross_sections = source
+            .XSECUP
             .into_iter()
             .zip(source.XERRUP)
-            .map(|(mean, err)| CrossSection{ mean, err: Some(err) })
+            .map(|(mean, err)| CrossSection {
+                mean,
+                err: Some(err),
+            })
             .collect();
         Self {
             generators: Default::default(), // TODO: update with LHEF version 3
@@ -46,21 +61,24 @@ impl From<(HEPRUP, HEPEUP)> for Event {
             event.SPINUP,
             event.VTIMUP,
         );
-        let particles = particles.map(|(id, status, p, col, spin, lifetime)| {
-            let m = p[4];
-            let p = [p[3], p[0], p[1], p[2]];
-            Particle {
-                id: Some(ParticleID::new(id)),
-                p: Some(p),
-                m: Some(m),
-                status: Some(from_i32(status)),
-                spin: Some(spin),
-                col: Some(col),
-                lifetime: Some(lifetime),
-                ..Default::default()
-            }
-        }).collect();
-        let mut vertices: AHashMap<(i32, Option<i32>), Vec<_>> = AHashMap::new();
+        let particles = particles
+            .map(|(id, status, p, col, spin, lifetime)| {
+                let m = p[4];
+                let p = [p[3], p[0], p[1], p[2]];
+                Particle {
+                    id: Some(ParticleID::new(id)),
+                    p: Some(p),
+                    m: Some(m),
+                    status: Some(from_i32(status)),
+                    spin: Some(spin),
+                    col: Some(col),
+                    lifetime: Some(lifetime),
+                    ..Default::default()
+                }
+            })
+            .collect();
+        let mut vertices: AHashMap<(i32, Option<i32>), Vec<_>> =
+            AHashMap::new();
         for (n, parents) in event.MOTHUP.into_iter().enumerate() {
             if parents[0] == 0 {
                 continue;
@@ -68,7 +86,10 @@ impl From<(HEPRUP, HEPEUP)> for Event {
             if parents[1] == 0 || parents[1] == parents[0] {
                 vertices.entry((parents[0] - 1, None)).or_default().push(n);
             } else {
-                vertices.entry((parents[0] - 1, Some(parents[1] - 1))).or_default().push(n);
+                vertices
+                    .entry((parents[0] - 1, Some(parents[1] - 1)))
+                    .or_default()
+                    .push(n);
             }
         }
         let vertices = Vec::from_iter(vertices);
@@ -110,11 +131,11 @@ impl From<(HEPRUP, HEPEUP)> for Event {
 
         Self {
             sample_info: header.into(),
-            weights: vec![WeightInfo{
+            weights: vec![WeightInfo {
                 weight: Some(event.XWGTUP),
                 ..Default::default()
             }],
-            scales: Scales{
+            scales: Scales {
                 mu_r: Some(event.SCALUP),
                 ..Default::default()
             },
@@ -138,48 +159,54 @@ fn from_i32(status: i32) -> Status {
         INTERMEDIATE_RESONANCE => IntermediateResonance,
         INTERMEDIATE_DOC => IntermediateDoc,
         INCOMING_BEAM => IncomingBeam,
-        s => Unknown(s)
+        s => Unknown(s),
     }
 }
 
 impl From<HEPEUP> for Event {
     fn from(source: HEPEUP) -> Self {
-        Self::from((HEPRUP{
-            IDBMUP: Default::default(),
-            EBMUP: Default::default(),
-            PDFGUP: Default::default(),
-            PDFSUP: Default::default(),
-            IDWTUP: Default::default(),
-            NPRUP: Default::default(),
-            XSECUP: Default::default(),
-            XERRUP: Default::default(),
-            XMAXUP: Default::default(),
-            LPRUP: Default::default(),
-            info: Default::default(),
-            attr: Default::default(),
-        }, source))
+        Self::from((
+            HEPRUP {
+                IDBMUP: Default::default(),
+                EBMUP: Default::default(),
+                PDFGUP: Default::default(),
+                PDFSUP: Default::default(),
+                IDWTUP: Default::default(),
+                NPRUP: Default::default(),
+                XSECUP: Default::default(),
+                XERRUP: Default::default(),
+                XMAXUP: Default::default(),
+                LPRUP: Default::default(),
+                info: Default::default(),
+                attr: Default::default(),
+            },
+            source,
+        ))
     }
 }
 
 impl From<HEPRUP> for Event {
     fn from(source: HEPRUP) -> Self {
-        Self::from((source, HEPEUP{
-            NUP: Default::default(),
-            IDRUP: Default::default(),
-            XWGTUP: Default::default(),
-            SCALUP: Default::default(),
-            AQEDUP: Default::default(),
-            AQCDUP: Default::default(),
-            IDUP: Default::default(),
-            ISTUP: Default::default(),
-            MOTHUP: Default::default(),
-            ICOLUP: Default::default(),
-            PUP: Default::default(),
-            VTIMUP: Default::default(),
-            SPINUP: Default::default(),
-            info: Default::default(),
-            attr: Default::default(),
-        }))
+        Self::from((
+            source,
+            HEPEUP {
+                NUP: Default::default(),
+                IDRUP: Default::default(),
+                XWGTUP: Default::default(),
+                SCALUP: Default::default(),
+                AQEDUP: Default::default(),
+                AQCDUP: Default::default(),
+                IDUP: Default::default(),
+                ISTUP: Default::default(),
+                MOTHUP: Default::default(),
+                ICOLUP: Default::default(),
+                PUP: Default::default(),
+                VTIMUP: Default::default(),
+                SPINUP: Default::default(),
+                info: Default::default(),
+                attr: Default::default(),
+            },
+        ))
     }
 }
 
@@ -197,7 +224,7 @@ impl From<Event> for HEPEUP {
         for vx in g.node_indices() {
             use petgraph::Direction::{Incoming, Outgoing};
             let incoming = Vec::from_iter(
-                g.edges_directed(vx, Incoming).map(|e| *e.weight())
+                g.edges_directed(vx, Incoming).map(|e| *e.weight()),
             );
             if incoming.is_empty() {
                 continue;
@@ -205,7 +232,7 @@ impl From<Event> for HEPEUP {
             assert!(incoming.len() <= 2);
             for out in g.edges_directed(vx, Outgoing) {
                 let out = *out.weight();
-                parents[out][0] = 1 + incoming[0]as i32;
+                parents[out][0] = 1 + incoming[0] as i32;
                 if let Some(parent) = incoming.last() {
                     parents[out][1] = 1 + *parent as i32;
                 }
@@ -214,23 +241,49 @@ impl From<Event> for HEPEUP {
         Self {
             NUP: source.particles.len() as i32,
             IDRUP: source.process_id.unwrap_or_default(),
-            XWGTUP: source.weights.first()
+            XWGTUP: source
+                .weights
+                .first()
                 .map(|w| w.weight.unwrap_or_default())
                 .unwrap_or_default(),
             SCALUP: source.scales.mu_r.unwrap_or_default(),
             AQEDUP: source.alpha_s.unwrap_or_default(),
             AQCDUP: source.alpha.unwrap_or_default(),
-            IDUP: source.particles.iter().map(|p| p.id.unwrap_or(ParticleID::new(0)).id()).collect(),
-            ISTUP: source.particles.iter().map(|p| to_i32(p.status.unwrap_or(Unknown(0)))).collect(),
+            IDUP: source
+                .particles
+                .iter()
+                .map(|p| p.id.unwrap_or(ParticleID::new(0)).id())
+                .collect(),
+            ISTUP: source
+                .particles
+                .iter()
+                .map(|p| to_i32(p.status.unwrap_or(Unknown(0))))
+                .collect(),
             MOTHUP: parents,
-            ICOLUP: source.particles.iter().map(|p| p.col.unwrap_or_default()).collect(),
-            PUP: source.particles.iter().map(|p| {
-                let m = p.m.unwrap_or_default();
-                let p = p.p.unwrap_or_default();
-                [p[1], p[2], p[3], p[0], m]
-            }).collect(),
-            VTIMUP: source.particles.iter().map(|p| p.lifetime.unwrap_or_default()).collect(),
-            SPINUP: source.particles.iter().map(|p| p.spin.unwrap_or_default()).collect(),
+            ICOLUP: source
+                .particles
+                .iter()
+                .map(|p| p.col.unwrap_or_default())
+                .collect(),
+            PUP: source
+                .particles
+                .iter()
+                .map(|p| {
+                    let m = p.m.unwrap_or_default();
+                    let p = p.p.unwrap_or_default();
+                    [p[1], p[2], p[3], p[0], m]
+                })
+                .collect(),
+            VTIMUP: source
+                .particles
+                .iter()
+                .map(|p| p.lifetime.unwrap_or_default())
+                .collect(),
+            SPINUP: source
+                .particles
+                .iter()
+                .map(|p| p.spin.unwrap_or_default())
+                .collect(),
             info: source.info,
             attr: source.attr,
         }
@@ -253,14 +306,20 @@ impl From<SampleInfo> for HEPRUP {
     fn from(source: SampleInfo) -> Self {
         let nsub = std::cmp::max(source.process_ids.len(), 1);
         Self {
-            IDBMUP: source.beam.map(|b| b.id.map(|id| id.id()).unwrap_or_default()),
+            IDBMUP: source
+                .beam
+                .map(|b| b.id.map(|id| id.id()).unwrap_or_default()),
             EBMUP: source.beam.map(|b| b.energy.unwrap_or_default()),
             PDFGUP: Default::default(),
             PDFSUP: source.pdf.map(|p| p.unwrap_or_default()),
             IDWTUP: source.weight_type.unwrap_or_default(),
             NPRUP: nsub as i32,
             XSECUP: source.cross_sections.iter().map(|xs| xs.mean).collect(),
-            XERRUP: source.cross_sections.iter().map(|xs| xs.err.unwrap_or_default()).collect(),
+            XERRUP: source
+                .cross_sections
+                .iter()
+                .map(|xs| xs.err.unwrap_or_default())
+                .collect(),
             XMAXUP: vec![0.; nsub], // TODO
             LPRUP: source.process_ids,
             info: source.info,

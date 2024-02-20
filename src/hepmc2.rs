@@ -1,10 +1,21 @@
 use ahash::AHashMap;
-use hepmc2::event::{Vertex, PdfInfo};
+use hepmc2::event::{PdfInfo, Vertex};
 use itertools::izip;
 use particle_id::ParticleID;
-use petgraph::{visit::{NodeIndexable, EdgeRef}, prelude::DiGraph, Graph, graph::EdgeReference};
+use petgraph::{
+    graph::EdgeReference,
+    prelude::DiGraph,
+    visit::{EdgeRef, NodeIndexable},
+    Graph,
+};
 
-use crate::{event::{Event, WeightInfo, Scales, SampleInfo, Particle, Status, CrossSection, HeavyIonInfo}, util::{IncomingInfo, extract_inc_info}};
+use crate::{
+    event::{
+        CrossSection, Event, HeavyIonInfo, Particle, SampleInfo, Scales,
+        Status, WeightInfo,
+    },
+    util::{extract_inc_info, IncomingInfo},
+};
 
 const HEPMC_OUTGOING: i32 = 1;
 const HEPMC_DECAYED: i32 = 2;
@@ -28,16 +39,13 @@ impl From<hepmc2::Event> for Event {
             cross_sections: vec![source.xs.into()],
             ..Default::default()
         };
-        let weights = izip!(
-            source.weights,
-            source.weight_names
-        ).map(|(weight, name)| {
-            WeightInfo {
+        let weights = izip!(source.weights, source.weight_names)
+            .map(|(weight, name)| WeightInfo {
                 weight: Some(weight),
                 name: Some(name),
                 ..Default::default()
-            }
-        }).collect();
+            })
+            .collect();
         let mut barcode_to_idx = AHashMap::new();
         for (idx, vx) in source.vertices.iter().enumerate() {
             let seen = barcode_to_idx.insert(vx.barcode, idx);
@@ -66,13 +74,19 @@ impl From<hepmc2::Event> for Event {
             // exclude incident particles with decayed status,
             // they will be will be treated when
             // looking at the vertex where they originate
-            let incoming = vx.particles_in.into_iter()
+            let incoming = vx
+                .particles_in
+                .into_iter()
                 .filter(|p| p.status != HEPMC_DECAYED);
             for incoming in incoming {
                 topology.add_node(Default::default());
                 let start = topology.from_index(topology.node_count() - 1);
                 let end = topology.from_index(idx);
-                topology.add_edge(start, end, particles.len() + vx_particles.len());
+                topology.add_edge(
+                    start,
+                    end,
+                    particles.len() + vx_particles.len(),
+                );
                 vx_particles.push(incoming);
             }
             for out in vx.particles_out {
@@ -83,7 +97,11 @@ impl From<hepmc2::Event> for Event {
                 });
                 let start = topology.from_index(idx);
                 let end = topology.from_index(end_vtx);
-                topology.add_edge(start, end, particles.len() + vx_particles.len());
+                topology.add_edge(
+                    start,
+                    end,
+                    particles.len() + vx_particles.len(),
+                );
                 vx_particles.push(out);
             }
 
@@ -95,7 +113,6 @@ impl From<hepmc2::Event> for Event {
                     status: Some(from_i32(particle.status)),
                     flows: particle.flows,
                     ..Default::default()
-
                 };
                 particles.push(conv)
             }
@@ -129,7 +146,7 @@ impl From<Event> for hepmc2::Event {
         // TODO: rivet chokes on this
         // add_root_vertex(source.sample_info.beam, &mut vertices);
 
-        let IncomingInfo{parton_id, x} = extract_inc_info(&source);
+        let IncomingInfo { parton_id, x } = extract_inc_info(&source);
         let pdf_info = PdfInfo {
             parton_id,
             x,
@@ -158,7 +175,8 @@ impl From<Event> for hepmc2::Event {
         // ensure there is always at least one vertex
         if g.node_count() == 0 {
             const END_VTX: i32 = -1;
-            let (incoming, outgoing) = particles.into_iter()
+            let (incoming, outgoing) = particles
+                .into_iter()
                 .partition(|p| p.status == HEPMC_INCOMING);
             let mut vx = Vertex {
                 barcode: END_VTX,
@@ -179,7 +197,7 @@ impl From<Event> for hepmc2::Event {
                     continue;
                 }
                 // TODO: is this barcode correct?
-                let barcode = - (n as i32) - 1;
+                let barcode = -(n as i32) - 1;
                 let incoming = g.edges_directed(vx, Incoming);
                 for n in incoming.map(|e| *e.weight()) {
                     particles[n].end_vtx = barcode;
@@ -187,12 +205,12 @@ impl From<Event> for hepmc2::Event {
             }
 
             for (n, vx) in g.node_indices().enumerate() {
-                let barcode = - (n as i32) - 1;
+                let barcode = -(n as i32) - 1;
                 use petgraph::Direction::{Incoming, Outgoing};
 
                 let outgoing = Vec::from_iter(
                     g.edges_directed(vx, Outgoing)
-                        .map(|e| particles[*e.weight()].clone())
+                        .map(|e| particles[*e.weight()].clone()),
                 );
                 // HepMC does not include the end vertex for
                 // final-state particles
@@ -206,12 +224,14 @@ impl From<Event> for hepmc2::Event {
                 }
                 let incoming = Vec::from_iter(
                     g.edges_directed(vx, Incoming)
-                    // don't include intermediate particles
-                        .filter_map(|e| if is_incoming(g, e) {
-                            Some(particles[*e.weight()].clone())
-                        } else {
-                            None
-                        })
+                        // don't include intermediate particles
+                        .filter_map(|e| {
+                            if is_incoming(g, e) {
+                                Some(particles[*e.weight()].clone())
+                            } else {
+                                None
+                            }
+                        }),
                 );
                 assert!(incoming.iter().all(|p| p.end_vtx == barcode));
                 let vx = g.node_weight(vx).unwrap();
@@ -226,7 +246,6 @@ impl From<Event> for hepmc2::Event {
                     z: vx.z.unwrap_or_default(),
                     t: vx.t.unwrap_or_default(),
                     weights: vx.weights.clone(),
-
                 };
                 vertices.push(vx);
             }
@@ -248,8 +267,16 @@ impl From<Event> for hepmc2::Event {
             signal_process_id: source.process_id.unwrap_or_default(),
             signal_process_vertex: Default::default(),
             random_states: source.random_states,
-            weights: source.weights.iter().map(|w| w.weight.unwrap_or_default()).collect(),
-            weight_names: source.weights.into_iter().map(|w| w.name.unwrap_or_default()).collect(),
+            weights: source
+                .weights
+                .iter()
+                .map(|w| w.weight.unwrap_or_default())
+                .collect(),
+            weight_names: source
+                .weights
+                .into_iter()
+                .map(|w| w.name.unwrap_or_default())
+                .collect(),
             vertices,
             xs,
             pdf_info,
@@ -304,10 +331,9 @@ fn to_i32(status: Status) -> i32 {
     use Status::*;
     match status {
         Incoming | IncomingBeam => HEPMC_INCOMING,
-        IntermediateResonance
-            | IntermediateSpacelike => HEPMC_DECAYED,
+        IntermediateResonance | IntermediateSpacelike => HEPMC_DECAYED,
         IntermediateDoc => HEPMC_DOC,
-        Outgoing =>  HEPMC_OUTGOING,
+        Outgoing => HEPMC_OUTGOING,
         Unknown(s) => s,
     }
 }
@@ -333,19 +359,25 @@ impl From<CrossSection> for hepmc2::event::CrossSection {
 impl From<&HeavyIonInfo> for hepmc2::event::HeavyIonInfo {
     fn from(source: &HeavyIonInfo) -> Self {
         Self {
-            ncoll_hard: source.ncoll_hard.unwrap_or_default() ,
-            npart_proj: source.npart_proj.unwrap_or_default() ,
-            npart_targ: source.npart_targ.unwrap_or_default() ,
-            ncoll: source.ncoll.unwrap_or_default() ,
-            spectator_neutrons: source.spectator_neutrons.unwrap_or_default() ,
-            spectator_protons: source.spectator_protons.unwrap_or_default() ,
-            n_nwounded_collisions: source.n_nwounded_collisions.unwrap_or_default() ,
-            nwounded_n_collisions: source.nwounded_n_collisions.unwrap_or_default() ,
-            nwounded_nwounded_collisions: source.nwounded_nwounded_collisions.unwrap_or_default() ,
-            impact_parameter: source.impact_parameter.unwrap_or_default() ,
-            event_plane_angle: source.event_plane_angle.unwrap_or_default() ,
-            eccentricity: source.eccentricity.unwrap_or_default() ,
-            sigma_inel_nn: source.sigma_inel_nn.unwrap_or_default()
+            ncoll_hard: source.ncoll_hard.unwrap_or_default(),
+            npart_proj: source.npart_proj.unwrap_or_default(),
+            npart_targ: source.npart_targ.unwrap_or_default(),
+            ncoll: source.ncoll.unwrap_or_default(),
+            spectator_neutrons: source.spectator_neutrons.unwrap_or_default(),
+            spectator_protons: source.spectator_protons.unwrap_or_default(),
+            n_nwounded_collisions: source
+                .n_nwounded_collisions
+                .unwrap_or_default(),
+            nwounded_n_collisions: source
+                .nwounded_n_collisions
+                .unwrap_or_default(),
+            nwounded_nwounded_collisions: source
+                .nwounded_nwounded_collisions
+                .unwrap_or_default(),
+            impact_parameter: source.impact_parameter.unwrap_or_default(),
+            event_plane_angle: source.event_plane_angle.unwrap_or_default(),
+            eccentricity: source.eccentricity.unwrap_or_default(),
+            sigma_inel_nn: source.sigma_inel_nn.unwrap_or_default(),
         }
     }
 }
@@ -367,7 +399,9 @@ impl From<&hepmc2::event::HeavyIonInfo> for HeavyIonInfo {
             spectator_protons: Some(source.spectator_protons),
             n_nwounded_collisions: Some(source.n_nwounded_collisions),
             nwounded_n_collisions: Some(source.nwounded_n_collisions),
-            nwounded_nwounded_collisions: Some(source.nwounded_nwounded_collisions),
+            nwounded_nwounded_collisions: Some(
+                source.nwounded_nwounded_collisions,
+            ),
             impact_parameter: Some(source.impact_parameter),
             event_plane_angle: Some(source.event_plane_angle),
             eccentricity: Some(source.eccentricity),

@@ -3,7 +3,15 @@ use itertools::izip;
 use ntuple::event::Part;
 use particle_id::ParticleID;
 
-use crate::{Event, event::{Status::{Outgoing, self}, Particle, SampleInfo, Beam, Scales, WeightInfo}, util::{IncomingInfo, extract_inc_info}};
+use crate::{
+    event::{
+        Beam, Particle, SampleInfo, Scales,
+        Status::{self, Outgoing},
+        WeightInfo,
+    },
+    util::{extract_inc_info, IncomingInfo},
+    Event,
+};
 
 impl From<ntuple::Event> for Event {
     fn from(source: ntuple::Event) -> Self {
@@ -64,7 +72,7 @@ impl From<ntuple::Event> for Event {
             Beam {
                 id: None,
                 energy: Some(e_in[1] / x2),
-            }
+            },
         ];
 
         let sample_info = SampleInfo {
@@ -99,10 +107,10 @@ impl From<ntuple::Event> for Event {
             name: Some("ME2".to_owned()),
             ..Default::default()
         });
-        weights.extend(
-            user_weights.into_iter()
-                .map(|w| WeightInfo { weight: Some(w), ..Default::default() })
-        );
+        weights.extend(user_weights.into_iter().map(|w| WeightInfo {
+            weight: Some(w),
+            ..Default::default()
+        }));
 
         Self {
             id: Some(id),
@@ -119,9 +127,11 @@ impl From<ntuple::Event> for Event {
 
 impl From<Event> for ntuple::Event {
     fn from(source: Event) -> Self {
-        let IncomingInfo{parton_id, x} = extract_inc_info(&source);
+        let IncomingInfo { parton_id, x } = extract_inc_info(&source);
 
-        let outgoing = source.particles.iter()
+        let outgoing = source
+            .particles
+            .iter()
             .filter(|p| p.status == Some(Outgoing));
         let nparticle = outgoing.clone().count();
         let mut pdg_code = Vec::with_capacity(nparticle);
@@ -132,7 +142,7 @@ impl From<Event> for ntuple::Event {
 
         for out in outgoing {
             pdg_code.push(out.id.map(|id| id.id()).unwrap_or_default());
-            let p  = out.p.unwrap_or_default();
+            let p = out.p.unwrap_or_default();
             energy.push(p[0] as f32);
             px.push(p[1] as f32);
             py.push(p[2] as f32);
@@ -145,28 +155,27 @@ impl From<Event> for ntuple::Event {
         let mut weight2 = 0.;
 
         weights.retain(|w| match w.name.as_deref() {
-                Some("ME") => {
-                    me_weight = w.weight.unwrap_or_default();
-                    false
-                },
-                Some("ME2") => {
-                    me_weight2 = w.weight.unwrap_or_default();
-                    false
-                },
-                Some("2") => {
-                    weight2 = w.weight.unwrap_or_default();
-                    false
-                },
-            _ => true
+            Some("ME") => {
+                me_weight = w.weight.unwrap_or_default();
+                false
+            }
+            Some("ME2") => {
+                me_weight2 = w.weight.unwrap_or_default();
+                false
+            }
+            Some("2") => {
+                weight2 = w.weight.unwrap_or_default();
+                false
+            }
+            _ => true,
         });
 
         let mut weights = weights.into_iter();
-        let weight = weights.next()
+        let weight = weights
+            .next()
             .map(|w| w.weight.unwrap_or_default())
             .unwrap_or_default();
-        let user_weights = weights
-            .filter_map(|w| w.weight)
-            .collect();
+        let user_weights = weights.filter_map(|w| w.weight).collect();
 
         Self {
             id: source.id.unwrap_or_default(),
@@ -201,7 +210,7 @@ fn id_to_part(process_id: Option<i32>) -> Part {
         1 => Part::I,
         2 => Part::R,
         3 => Part::V,
-        _ => Part::B
+        _ => Part::B,
     }
 }
 

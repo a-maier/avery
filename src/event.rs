@@ -1,4 +1,4 @@
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap, HashMap};
 
 use particle_id::ParticleID;
 use petgraph::prelude::DiGraph;
@@ -77,7 +77,6 @@ pub struct WeightInfo {
     pub pdf: Option<i32>,
     /// PDF id for second beam, if different from first beam
     pub pdf2: Option<i32>,
-
 }
 
 // Scales associated with event
@@ -95,7 +94,7 @@ pub struct Scales {
 #[derive(Clone, Debug, Default, PartialEq, PartialOrd)]
 pub struct Particle {
     /// Particle type
-    pub id:  Option<ParticleID>,
+    pub id: Option<ParticleID>,
     /// Four-momentum
     pub p: Option<[f64; 4]>,
     /// Mass

@@ -1,6 +1,9 @@
-use stripper_xml::{Momentum, Id};
+use stripper_xml::{Id, Momentum};
 
-use crate::{Event, event::{Status, Particle, Reweight, Scales, WeightInfo}};
+use crate::{
+    event::{Particle, Reweight, Scales, Status, WeightInfo},
+    Event,
+};
 
 impl From<stripper_xml::SubEvent> for Event {
     fn from(ev: stripper_xml::SubEvent) -> Self {
@@ -24,7 +27,8 @@ impl From<stripper_xml::SubEvent> for Event {
 
 impl From<Event> for stripper_xml::SubEvent {
     fn from(ev: Event) -> Self {
-        let particles = ev.particles
+        let particles = ev
+            .particles
             .into_iter()
             .filter_map(|p| match p.status {
                 Some(Status::Incoming | Status::Outgoing) => Some(p.into()),
@@ -32,7 +36,9 @@ impl From<Event> for stripper_xml::SubEvent {
             })
             .collect();
         Self {
-            weight: ev.weights.first()
+            weight: ev
+                .weights
+                .first()
                 .map(|w| w.weight.unwrap_or_default())
                 .unwrap_or_default(),
             mu_r: ev.scales.mu_r.unwrap_or_default(),
@@ -46,10 +52,10 @@ impl From<Event> for stripper_xml::SubEvent {
 impl From<Particle> for stripper_xml::Particle {
     fn from(particle: Particle) -> Self {
         Self {
-            id: Id{
+            id: Id {
                 status: particle.status.unwrap().into(),
                 pdg_id: particle.id.unwrap(),
-            } ,
+            },
             momentum: Momentum(particle.p.unwrap_or_default()),
         }
     }
