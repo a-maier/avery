@@ -210,6 +210,7 @@ fn id_to_part(process_id: Option<i32>) -> Part {
         1 => Part::I,
         2 => Part::R,
         3 => Part::V,
+        4 => Part::S,
         _ => Part::B,
     }
 }
@@ -220,5 +221,6 @@ fn part_to_id(part: Part) -> i32 {
         Part::I => 1,
         Part::R => 2,
         Part::V => 3,
+        Part::S => 4,
     }
 }
