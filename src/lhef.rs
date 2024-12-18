@@ -303,8 +303,11 @@ fn to_i32(status: Status) -> i32 {
 }
 
 impl From<SampleInfo> for HEPRUP {
-    fn from(source: SampleInfo) -> Self {
-        let nsub = std::cmp::max(source.process_ids.len(), 1);
+    fn from(mut source: SampleInfo) -> Self {
+        if source.process_ids.is_empty() {
+            source.process_ids.push(0)
+        }
+        let nsub = source.process_ids.len();
         Self {
             IDBMUP: source
                 .beam
